@@ -10,24 +10,17 @@ const createSubject = async (req, res, next) => {
         const { name, code, teacherId, classId } = req.body;
 
         // Validation
-        if (!name || !code || !teacherId || !classId) {
+        if (!name || !code) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
-        // Check if teacher exists
-        const teacher = await Teacher.findById(teacherId);
-        if (!teacher) return res.status(404).json({ message: "Teacher not found" });
-
-        // Check if class exists
-        const classObj = await Class.findById(classId);
-        if (!classObj) return res.status(404).json({ message: "Class not found" });
 
         // Create subject
         const subject = new Subject({
             name,
             code,
-            teacherId: [teacherId],  // store as array for multiple teachers
-            classId: [classId],      // store as array for multiple classes
+            teacherIds: [teacherId],  // store as array for multiple teachers
+            classIds: [classId],      // store as array for multiple classes
         });
 
         await subject.save();
@@ -43,8 +36,8 @@ const createSubject = async (req, res, next) => {
 const getAllSubjects = async (req, res, next) => {
     try {
         const subjects = await Subject.find()
-            .populate("teacherId", "name email")
-            .populate("classId", "name");
+            .populate("teacherIds", "name email")
+            .populate("classIds", "name");
         res.status(200).json(subjects);
     } catch (error) {
         next(error);
@@ -56,8 +49,8 @@ const getAllSubjects = async (req, res, next) => {
 const getSubjectById = async (req, res, next) => {
     try {
         const subject = await Subject.findById(req.params.id)
-            .populate("teacherId", "name email")
-            .populate("classId", "name");
+            .populate("teacherIds", "name email")
+            .populate("classIds", "name");
 
         if (!subject) return res.status(404).json({ message: "Subject not found" });
 
@@ -76,8 +69,8 @@ const updateSubject = async (req, res, next) => {
         const subject = await Subject.findById(req.params.id);
         if (!subject) return res.status(404).json({ message: "Subject not found" });
 
-        if (teacherId) subject.teacherId = [teacherId];
-        if (classId) subject.classId = [classId];
+        if (teacherId) subject.teacherIds = [teacherId];
+        if (classId) subject.classIds = [classId];
         if (name) subject.name = name;
         if (code) subject.code = code;
 

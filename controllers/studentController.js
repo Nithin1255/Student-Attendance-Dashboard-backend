@@ -1,4 +1,5 @@
 const Student = require("../models/Student");
+const Class = require("../models/Class");
 
 // @desc    Add new student
 // @route   POST /api/students
@@ -56,8 +57,8 @@ const getStudentById = async (req, res) => {
 // @route   GET /api/students/class/:classId
 const getStudentsByClass = async (req, res) => {
     try {
-        const { classId } = req.params;
-        const students = await Student.find({ classId }).populate("classId", "name");
+        const { id } = req.params; // <-- use id, not classId
+        const students = await Student.find({ classId: id }).populate("classId", "name");
         res.status(200).json(students);
     } catch (error) {
         res.status(500).json({ message: "Error fetching students by class", error: error.message });

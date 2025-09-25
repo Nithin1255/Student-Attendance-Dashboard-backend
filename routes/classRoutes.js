@@ -8,5 +8,6 @@ router.get("/all-classes", classController.getClasses);       // Get all classes
 router.get("/:id", classController.getClassById);  // Get class by ID
 router.put("/:id", classController.updateClass);   // Update class
 router.delete("/:id", classController.deleteClass);// Delete class
+router.get('/:classId/students', classController.getClassStudents); // Get all students in a class
 
 module.exports = router;

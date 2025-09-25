@@ -8,4 +8,16 @@ const roleMiddleware = (...allowedRoles) => {
     };
 };
 
-module.exports = roleMiddleware;
+// Middleware to check if user is admin
+function isAdmin(req, res, next) {
+    if (req.user && req.user.role === 'admin') return next();
+    return res.status(403).json({ message: 'Forbidden: Admins only' });
+}
+
+// Middleware to check if user is teacher
+function isTeacher(req, res, next) {
+    if (req.user && req.user.role === 'teacher') return next();
+    return res.status(403).json({ message: 'Forbidden: Teachers only' });
+}
+
+module.exports = { isAdmin, isTeacher, roleMiddleware };

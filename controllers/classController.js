@@ -79,3 +79,21 @@ exports.deleteClass = async (req, res) => {
         res.status(500).json({ message: "Error deleting class", error: error.message });
     }
 };
+
+// Get all students in a class
+exports.getClassStudents = async (req, res) => {
+    try {
+        const { classId } = req.params;
+        // Populate students in the class
+        const foundClass = await Class.findById(classId).populate({
+            path: 'studentIds',
+            select: 'name email',
+        });
+        if (!foundClass) {
+            return res.status(404).json({ message: "Class not found" });
+        }
+        res.status(200).json(foundClass.studentIds || []);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching students", error: error.message });
+    }
+};

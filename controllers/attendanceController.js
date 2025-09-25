@@ -1,5 +1,6 @@
 const Attendance = require("../models/Attendance");
 const Student = require("../models/Student");
+const mongoose = require('mongoose');
 
 /**
  * @desc    Mark or update attendance for multiple students
@@ -213,7 +214,7 @@ exports.getDailyAttendanceReport = async (req, res) => {
             studentId: { $in: studentIds },
             date: { $gte: new Date(from), $lte: new Date(to) },
         };
-        if (subjectId) match.subjectId = subjectId;
+        if (subjectId) match.subjectId = new mongoose.Types.ObjectId(subjectId);
 
         // Aggregate present counts per day (single query)
         const agg = await Attendance.aggregate([

@@ -17,6 +17,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+app.get("/", (req, res) => {
+    res.status(200).json({ message: "Welcome to the Student Attendance Dashboard Backend!" });
+});
+
 // Routes
 app.use("/api/teacher", teacherRoutes);
 app.use("/api/student", studentRoutes);

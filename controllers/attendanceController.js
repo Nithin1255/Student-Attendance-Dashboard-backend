@@ -204,55 +204,57 @@ exports.getDailyAttendanceReport = async (req, res) => {
     }
 
     try {
-        // Get class strength (number of students in class)
-        const students = await Student.find({ classId }).select('_id').lean();
-        const studentIds = students.map(s => s._id);
-        const classStrength = studentIds.length;
+        // ✅ FIX 1: Validate classId before using it
+        if (!mongoose.Types.ObjectId.isValid(classId)) {
+            return res.status(400).json({ message: 'Invalid Class ID format.' });
+        }
 
-        // Build match for aggregation
-        const match = {
+        const studentsInClass = await Student.find({ classId }).select('_id').lean();
+        if (studentsInClass.length === 0) {
+            return res.status(200).json([]);
+        }
+        const studentIds = studentsInClass.map(s => s._id);
+
+        const matchCondition = {
+            classId: new mongoose.Types.ObjectId(classId),
             studentId: { $in: studentIds },
             date: { $gte: new Date(from), $lte: new Date(to) },
         };
-        if (subjectId) match.subjectId = new mongoose.Types.ObjectId(subjectId);
 
-        // Aggregate present counts per day (single query)
-        const agg = await Attendance.aggregate([
-            { $match: match },
+        // ✅ FIX 2: Validate subjectId before using it
+        if (subjectId && mongoose.Types.ObjectId.isValid(subjectId)) {
+            matchCondition.subjectId = new mongoose.Types.ObjectId(subjectId);
+        }
+
+        const dailyStats = await Attendance.aggregate([
+            { $match: matchCondition },
             {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
                     presentCount: { $sum: { $cond: [{ $eq: ["$status", "Present"] }, 1, 0] } },
+                    totalMarked: { $sum: 1 }
                 }
             },
             { $sort: { _id: 1 } }
         ]);
 
-        // Build full date list between from and to inclusive
-        const start = new Date(from);
-        const end = new Date(to);
-        start.setHours(0, 0, 0, 0);
-        end.setHours(0, 0, 0, 0);
+        const statsMap = new Map(dailyStats.map(item => [item._id, { presentCount: item.presentCount, totalMarked: item.totalMarked }]));
 
-        const dates = [];
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            dates.push(new Date(d).toISOString().split('T')[0]);
+        const results = [];
+        for (let d = new Date(from); d <= new Date(to); d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const stats = statsMap.get(dateStr) || { presentCount: 0, totalMarked: 0 };
+
+            const percentage = stats.totalMarked > 0 ? (stats.presentCount / stats.totalMarked) * 100 : 0;
+
+            results.push({
+                date: dateStr,
+                day: d.getDate(),
+                presentCount: stats.presentCount,
+                classStrength: stats.totalMarked,
+                percentage: percentage,
+            });
         }
-
-        const countsMap = new Map(agg.map(a => [a._id, a.presentCount]));
-
-        const results = dates.map(dt => {
-            const presentCount = countsMap.get(dt) || 0;
-            const percentage = classStrength > 0 ? (presentCount / classStrength) * 100 : 0;
-            const dayNum = new Date(dt).getDate();
-            return {
-                date: dt,
-                day: dayNum,
-                presentCount,
-                classStrength,
-                percentage,
-            };
-        });
 
         res.status(200).json(results);
     } catch (error) {

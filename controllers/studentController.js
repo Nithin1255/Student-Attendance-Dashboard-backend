@@ -2,7 +2,7 @@ const Student = require("../models/Student");
 const Class = require("../models/Class");
 
 // @desc    Add new student
-// @route   POST /api/students
+// @route   POST /api/student
 const addStudent = async (req, res, next) => {
     try {
         const { name, rollNo, classId } = req.body;
@@ -29,11 +29,15 @@ const addStudent = async (req, res, next) => {
 };
 
 
-// @desc    Get all students
-// @route   GET /api/students
+// @desc    Get all students or by classId (query param)
+// @route   GET /api/student?classId=...
 const getStudents = async (req, res) => {
     try {
-        const students = await Student.find().populate("classId", "name");
+        const filter = {};
+        if (req.query.classId) filter.classId = req.query.classId;
+        const students = await Student.find(filter)
+            .populate("classId", "name")
+            .sort({ rollNo: 1 });
         res.status(200).json(students);
     } catch (error) {
         res.status(500).json({ message: "Error fetching students", error: error.message });
@@ -41,7 +45,7 @@ const getStudents = async (req, res) => {
 };
 
 // @desc    Get single student by ID
-// @route   GET /api/students/:id
+// @route   GET /api/student/:id
 const getStudentById = async (req, res) => {
     try {
         const student = await Student.findById(req.params.id).populate("classId", "name");
@@ -54,11 +58,11 @@ const getStudentById = async (req, res) => {
 };
 
 // @desc    Get students by ClassId
-// @route   GET /api/students/class/:classId
+// @route   GET /api/student/class/:classId
 const getStudentsByClass = async (req, res) => {
     try {
-        const { id } = req.params; // <-- use id, not classId
-        const students = await Student.find({ classId: id }).populate("classId", "name");
+        const { classId } = req.params; // <-- use id, not classId
+        const students = await Student.find({ classId: classId }).populate("classId", "name");
         res.status(200).json(students);
     } catch (error) {
         res.status(500).json({ message: "Error fetching students by class", error: error.message });
@@ -66,7 +70,7 @@ const getStudentsByClass = async (req, res) => {
 };
 
 // @desc    Update student
-// @route   PUT /api/students/:id
+// @route   PUT /api/student/:id
 const updateStudent = async (req, res, next) => {
     try {
         const { name, rollNo, classId } = req.body;
@@ -93,7 +97,7 @@ const updateStudent = async (req, res, next) => {
     }
 };
 // @desc    Delete student
-// @route   DELETE /api/students/:id
+// @route   DELETE /api/student/:id
 const deleteStudent = async (req, res) => {
     try {
         const student = await Student.findByIdAndDelete(req.params.id);

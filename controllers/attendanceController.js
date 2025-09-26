@@ -285,3 +285,40 @@ exports.debugAttendance = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 }
+
+// Add this new function at the end of the file
+exports.getStudentAttendanceReport = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const records = await Attendance.find({ studentId }).populate('subjectId', 'name');
+
+        if (!records.length) {
+            return res.status(200).json({ overall: 0, bySubject: [] });
+        }
+
+        const presentCount = records.filter(r => r.status === 'Present').length;
+        const overall = (presentCount / records.length) * 100;
+
+        const subjectStats = {};
+        records.forEach(rec => {
+            const subjectName = rec.subjectId?.name || 'Unknown';
+            if (!subjectStats[subjectName]) {
+                subjectStats[subjectName] = { present: 0, total: 0 };
+            }
+            subjectStats[subjectName].total++;
+            if (rec.status === 'Present') {
+                subjectStats[subjectName].present++;
+            }
+        });
+
+        const bySubject = Object.keys(subjectStats).map(name => ({
+            name,
+            percentage: (subjectStats[name].present / subjectStats[name].total) * 100,
+        }));
+
+        res.status(200).json({ overall, bySubject });
+    } catch (error) {
+        console.error('Error fetching student report:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};

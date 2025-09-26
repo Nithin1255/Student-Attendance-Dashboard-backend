@@ -15,11 +15,34 @@ connectDB();
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+const allowedOrigins = [
+    "https://student-attendance-dashboard-fronte.vercel.app", // Your main Vercel URL
+    // Add localhost for development if you need it
+    "http://localhost:3000",
+    "http://localhost:5173" // Vite default port
+];
 
-app.get("/", (req, res) => {
-    res.status(200).json({ message: "Welcome to the Student Attendance Dashboard Backend!" });
-});
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        // Check if the origin is in our allowed list
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
+        }
+
+        // Allow Vercel's preview subdomains
+        if (/\.vercel\.app$/.test(origin)) {
+            return callback(null, true);
+        }
+
+        callback(new Error('Not allowed by CORS'));
+    }
+};
+
+app.use(cors(corsOptions));
+// ✅ END: REPLACEMENT
 
 // Routes
 app.use("/api/teacher", teacherRoutes);

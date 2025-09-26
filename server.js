@@ -42,7 +42,10 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// ✅ END: REPLACEMENT
+
+app.get("/", (req, res) => {
+    res.status(200).json({ message: "Welcome to the Student Attendance Dashboard Backend!" });
+});
 
 // Routes
 app.use("/api/teacher", teacherRoutes);

@@ -322,3 +322,71 @@ exports.getStudentAttendanceReport = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+// Add this new function to the exports and the file
+exports.getMasterReport = async (req, res) => {
+    const { classId, subjectId, from, to } = req.query;
+
+    if (!classId || !from || !to) {
+        return res.status(400).json({ message: 'Class ID and date range are required.' });
+    }
+
+    try {
+        const classObjectId = new mongoose.Types.ObjectId(classId);
+        const subjectObjectId = subjectId ? new mongoose.Types.ObjectId(subjectId) : null;
+        const fromDate = new Date(from);
+        const toDate = new Date(to);
+
+        // 1. Get all students in the class
+        const students = await Student.find({ classId: classObjectId }).sort({ rollNo: 1 }).lean();
+        const studentIds = students.map(s => s._id);
+
+        // 2. Build the match condition for the aggregation
+        const matchCondition = {
+            classId: classObjectId,
+            studentId: { $in: studentIds },
+            date: { $gte: fromDate, $lte: toDate },
+        };
+        if (subjectObjectId) {
+            matchCondition.subjectId = subjectObjectId;
+        }
+
+        // 3. Aggregate the data
+        const reportData = await Attendance.aggregate([
+            { $match: matchCondition },
+            {
+                $group: {
+                    _id: "$studentId",
+                    presentCount: { $sum: { $cond: [{ $eq: ["$status", "Present"] }, 1, 0] } },
+                    totalCount: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const reportMap = new Map(reportData.map(r => [r._id.toString(), r]));
+
+        // 4. Combine student data with aggregated attendance stats
+        const detailedReport = students.map(student => {
+            const stats = reportMap.get(student._id.toString()) || { presentCount: 0, totalCount: 0 };
+            return {
+                ...student,
+                present: stats.presentCount,
+                total: stats.totalCount,
+                percentage: stats.totalCount > 0 ? (stats.presentCount / stats.totalCount) * 100 : 0
+            };
+        });
+
+        // 5. Calculate overall summary
+        const summary = {
+            totalPresent: detailedReport.reduce((sum, s) => sum + s.present, 0),
+            totalRecords: detailedReport.reduce((sum, s) => sum + s.total, 0)
+        };
+        summary.overallPercentage = summary.totalRecords > 0 ? (summary.totalPresent / summary.totalRecords) * 100 : 0;
+
+        res.status(200).json({ detailedReport, summary });
+
+    } catch (error) {
+        console.error('Error generating master report:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};

@@ -8,6 +8,7 @@ const {
     getDailyAttendanceReport,
     debugAttendance,
     getStudentAttendanceReport,
+    getMasterReport,
 } = require("../controllers/attendanceController");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -27,6 +28,8 @@ router.get('/debug', debugAttendance);
 // Get trends (daily present count)
 router.get("/trends", getAttendanceTrends);
 router.get("/student/:studentId/report", getStudentAttendanceReport);
+
+router.get("/master-report", getMasterReport);
 
 
 module.exports = router;
